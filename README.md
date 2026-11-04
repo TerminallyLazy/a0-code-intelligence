@@ -8,13 +8,16 @@ Target: upstream `ready` at `ba9b67df0f54ac78106ae85c552ef5d2458f7c9a`. Framewor
 
 ## Install and enable
 
-1. Install the [latest release ZIP](https://github.com/TerminallyLazy/a0-code-intelligence/releases/latest) through Agent Zero's Plugin Hub ZIP installer, or install from `https://github.com/TerminallyLazy/a0-code-intelligence`. For manual installation, place this repository's contents at `usr/plugins/code_intelligence/`; `plugin.yaml` must be at the plugin root.
+1. Install the [latest release ZIP](https://github.com/TerminallyLazy/a0-code-intelligence/releases/latest) through Agent Zero's Plugin Hub ZIP installer, or install from `https://github.com/TerminallyLazy/a0-code-intelligence`. Installation automatically prepares the pinned language servers and debug adapters through `hooks.py`. No Execute action is needed.
 2. Select an Agent Zero project and enable Code Intelligence for its agent/profile.
 3. In project plugin settings, select the project's Python and Node executables. Defaults are `/opt/venv/bin/python` and `/usr/bin/node`; choose the project's virtual environment when appropriate.
-4. Open the **Code Intelligence** surface, select **Setup**, and choose **Set up pinned tools**. Downloads are pinned and checksum-verified in `.runtime/tools/`; no global or project dependencies are installed. npm and Node must already exist. Enabling the plugin alone never downloads anything.
-5. Review the displayed project/environment configuration and grant semantic access. Grant debugging separately when needed. A configuration, executable or project change requires a new review.
+4. Open **Code Intelligence → Setup**, review the displayed project/environment configuration and grant semantic access. Grant debugging separately when needed. A configuration, executable or project change requires a new review.
 
-The Plugin Hub's manual execute action runs the same installer. Run that action when project tools are idle; the Code Intelligence setup surface also closes running sessions before reinstalling. Internet access is needed for initial setup, not ordinary language-server use.
+Downloads are pinned and checksum-verified in `.runtime/tools/`; no global or project dependencies are installed. Node.js and npm must already exist in the Agent Zero runtime. Initial installation and changed tool pins require internet access. Git updates run the same installation hook and reuse an intact toolchain when its pins match. A failed installation is reported by Plugin Hub; a failed tool refresh preserves the previous tools. Importing or enabling the plugin does not download tools or grant project access.
+
+**Repair tools** in the Setup tab reruns the same lifecycle hook if plugin-owned tool files are damaged. Repair stops active sessions before replacing tools. For development, keep the repository at `usr/plugins/code_intelligence/` and run the framework's `helpers.plugins.call_plugin_hook("code_intelligence", "install")` after copying it; copying a directory bypasses Plugin Hub's installation lifecycle.
+
+When upgrading from 0.2.1 or earlier on the pinned Agent Zero build, existing tools carry over. If you never completed that older version's setup, use **Repair tools** once: the framework can retain the old installation hook during that first update. Version 0.2.2 clears its hook cache before subsequent updates.
 
 ## Coding tools
 

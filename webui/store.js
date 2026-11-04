@@ -112,10 +112,10 @@ export const store = createStore("codeIntelligence", {
     this.timer = setInterval(() => { if (!this.busy) this.refresh(true); }, 2000);
   },
   cleanup() { if (this.timer) clearInterval(this.timer); this.timer = null; },
-  async setup() {
+  async repairTools() {
     await this.run(async () => {
       this.status = await this.request("setup", { confirm: true });
-      toastFrontendSuccess("Pinned language tools and debug adapters are installed.", "Code Intelligence");
+      toastFrontendSuccess("Language tools and debug adapters repaired.", "Code Intelligence");
     });
   },
   async grant(kind, enabled) {

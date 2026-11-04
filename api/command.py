@@ -1,5 +1,6 @@
 import asyncio
 from helpers.api import ApiHandler, Request
+from usr.plugins.code_intelligence import hooks as lifecycle
 from usr.plugins.code_intelligence.helpers import access, service, setup
 
 
@@ -24,8 +25,7 @@ class Command(ApiHandler):
                 elif operation == "setup":
                     if input.get("confirm") is not True:
                         raise ValueError("Explicit setup confirmation is required")
-                    await asyncio.to_thread(service.shutdown)
-                    await asyncio.to_thread(setup.setup_tools)
+                    await asyncio.to_thread(lifecycle.install, force=True)
                     scope = access.resolve(agent, tool, require_trust=False)
                 elif operation == "close":
                     await asyncio.to_thread(service.shutdown)

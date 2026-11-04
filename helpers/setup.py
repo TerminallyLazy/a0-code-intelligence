@@ -1,22 +1,47 @@
-"""Explicit, pinned setup. Importing or enabling the plugin never installs tools."""
+"""Pinned, plugin-owned setup called by the installation lifecycle hook."""
 from __future__ import annotations
 
 import hashlib
+import errno
 import json
-import os
 from pathlib import Path
 import shutil
 import subprocess
 import tarfile
 import tempfile
+import time
 import urllib.request
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / ".runtime"
+REQUIRED_FILES = (
+    "node_modules/pyright/langserver.index.js",
+    "node_modules/typescript/lib/typescript.js",
+    "node_modules/typescript-language-server/lib/cli.mjs",
+    "python/debugpy/adapter/__main__.py",
+    "js-debug/src/dapDebugServer.js",
+)
 
 
-def setup_tools():
+def remove_tree(path):
+    # Host-mounted Docker folders can gain metadata files during removal.
+    # Retry that race only; permission and other filesystem errors still fail.
+    for attempt in range(3):
+        try:
+            shutil.rmtree(path)
+            return
+        except OSError as exc:
+            if exc.errno != errno.ENOTEMPTY or attempt == 2:
+                raise
+            time.sleep(0.1 * (attempt + 1))
+
+
+def setup_tools(force=False):
+    if not force and status()["installed"]:
+        return status()
+    if not shutil.which("npm") or not shutil.which("node"):
+        raise RuntimeError("Code Intelligence installation requires Node.js and npm in the Agent Zero runtime")
     DATA.mkdir(mode=0o700, parents=True, exist_ok=True)
     lock = json.loads((ROOT / "toolchain/downloads.json").read_text())
     with tempfile.TemporaryDirectory(dir=DATA) as temporary:
@@ -43,33 +68,45 @@ def setup_tools():
             else:
                 with tarfile.open(archive) as package:
                     package.extractall(stage, filter="data")
+        if not all((stage / name).is_file() for name in REQUIRED_FILES):
+            raise RuntimeError("Code Intelligence toolchain is incomplete; existing tools were preserved")
         # All downloads validated before replacing the plugin-owned toolchain.
         tools = DATA / "tools"
         previous = DATA / "tools.previous"
         if previous.exists():
-            shutil.rmtree(previous)
+            remove_tree(previous)
         if tools.exists():
             tools.rename(previous)
-        tools.mkdir()
         try:
+            tools.mkdir()
             for name in ("node_modules", "python", "js-debug", "package-lock.json"):
                 shutil.move(str(stage / name), tools / name)
             receipt = {"downloads": lock, "npm_lock_sha256": hashlib.sha256((tools / "package-lock.json").read_bytes()).hexdigest()}
             (tools / "receipt.json").write_text(json.dumps(receipt, indent=2))
         except BaseException:
-            shutil.rmtree(tools)
+            if tools.exists():
+                remove_tree(tools)
             if previous.exists():
                 previous.rename(tools)
             raise
         if previous.exists():
-            shutil.rmtree(previous)
+            remove_tree(previous)
     return status()
 
 
 def status():
     tools = DATA / "tools"
-    return {"installed": (tools / "receipt.json").is_file(), "location": str(tools),
-            "versions": json.loads((ROOT / "toolchain/downloads.json").read_text()),
+    downloads = json.loads((ROOT / "toolchain/downloads.json").read_text())
+    lock_hash = hashlib.sha256((ROOT / "toolchain/package-lock.json").read_bytes()).hexdigest()
+    expected = {"downloads": downloads, "npm_lock_sha256": lock_hash}
+    try:
+        installed = (json.loads((tools / "receipt.json").read_text()) == expected
+                     and hashlib.sha256((tools / "package-lock.json").read_bytes()).hexdigest() == lock_hash
+                     and all((tools / name).is_file() for name in REQUIRED_FILES))
+    except (OSError, ValueError):
+        installed = False
+    return {"installed": installed, "location": str(tools),
+            "versions": downloads,
             "npm": json.loads((ROOT / "toolchain/package.json").read_text())["dependencies"]}
 
 

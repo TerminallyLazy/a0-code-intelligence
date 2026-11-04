@@ -1,6 +1,6 @@
-# Validation — Code Intelligence 0.2.1
+# Validation — Code Intelligence 0.2.2
 
-Version 0.2.1 adds the plugin logo at `thumbnail.jpg` and `webui/thumbnail.jpg`, plus its README display. Both files are identical square 256px JPEGs below the community catalog's 20 KB thumbnail limit. Runtime behavior is unchanged from 0.2.0; the 39-test evidence below belongs to that tested implementation. Asset dimensions, file integrity, automatic Plugin Hub thumbnail path and archive contents were checked for this packaging update.
+Version 0.2.2 moves pinned dependency setup into the plugin's `install()` lifecycle hook and removes `execute.py`. The Setup tab now shows automatic installation status, with repair available as secondary maintenance. The two identical 256px thumbnails from 0.2.1 are unchanged.
 
 Validated November 4, 2026 against upstream `agent0ai/agent-zero` `ready` at [`ba9b67df0f54ac78106ae85c552ef5d2458f7c9a`](https://github.com/agent0ai/agent-zero/tree/ba9b67df0f54ac78106ae85c552ef5d2458f7c9a).
 
@@ -8,7 +8,17 @@ Validated November 4, 2026 against upstream `agent0ai/agent-zero` `ready` at [`b
 
 Disposable Linux Docker containers used the pinned upstream source over the locally available Agent Zero image (`05d6ab347bd7`), framework Python 3.12.4, execution Python 3.13.14 and Node 22.22.0. Project files, servers and adapters shared that runtime. The user's active Agent Zero instance was not modified. No core source changes were needed.
 
-Tool setup installed Pyright 1.1.414, TypeScript 5.9.3, typescript-language-server 6.0.3, debugpy 1.8.22 and vscode-js-debug 1.140.0. npm integrity is locked in `toolchain/package-lock.json`; downloaded Python/debug-adapter archives have SHA-256 checksums in `toolchain/downloads.json`. Setup is explicit, isolated and separate from plugin installation.
+Tool setup installed Pyright 1.1.414, TypeScript 5.9.3, typescript-language-server 6.0.3, debugpy 1.8.22 and vscode-js-debug 1.140.0. npm integrity is locked in `toolchain/package-lock.json`; downloaded Python/debug-adapter archives have SHA-256 checksums in `toolchain/downloads.json`. Setup now runs automatically during installation and updates, inside plugin-owned storage.
+
+## 0.2.2 installation verification
+
+The existing 39 framework/protocol/freshness/real-tool tests and ten installation tests pass. The installation tests cover matching-pin reuse, changed pins, missing entrypoints, corrupt receipts, checksum failure, npm failure, absent prerequisites, replacement rollback, shutdown before setup, recovery-journal protection, hook-cache invalidation and bounded cleanup retries. They use synthetic archives and do not replace real installation acceptance.
+
+Agent Zero's actual `install_from_zip` installed a candidate ZIP in a fresh disposable runtime with no tool cache. Its installation hook downloaded all pinned tools automatically; no Execute or setup API call was made. All 48 tests present at that point passed from the installed copy in 43.005 seconds, followed by a real Python diagnostic and an uninstall that stopped the owned server. The final cleanup test was added after the Git update check exposed a host-mounted filesystem metadata race. JavaScript syntax and package contents were checked; this change does not claim a new browser acceptance run.
+
+The pinned framework caches hooks between `pre_update` and `install`. From 0.2.2 onward, `pre_update` invalidates this plugin's hook entry, and `install` reads setup implementation from the installed source so updates use current code. Earlier releases retain their legacy hook during their first update: an already installed matching toolchain stays usable; if a legacy installation never prepared its tools, the Setup tab's repair control completes that one-time migration. No automatic download is added to ordinary activation or model/tool execution.
+
+Actual Git installation and `update_from_git` passed against a local synthetic remote. A code-only update reused tools with download access blocked; a subsequent update restored a deleted Pyright entrypoint automatically. Injecting an npm failure into the native ZIP installer raised the failure and removed the failed installation. Checksum and replacement-failure tests preserved the previous toolchain and recovery data.
 
 ## 0.2.0 enhancement verification
 
@@ -60,4 +70,4 @@ This is an evidence-backed alignment judgment, not a claim of maintainer approva
 - Per-file atomic replacement plus a recovery journal is not a global filesystem transaction. Conflicting external changes are preserved and require reconciliation.
 - This document records local acceptance evidence. Source publication and community catalog acceptance are tracked separately through GitHub releases and pull requests. No production deployment or live-provider coding session is claimed.
 
-Reproduce the current 39-test suite using the command in [README.md](README.md). Keep its synthetic projects in a disposable runtime. The installer and lifecycle acceptance script/receipts accompany the local delivery separately from runtime plugin contents.
+Reproduce the current 49-test suite using the command in [README.md](README.md). Keep its synthetic projects in a disposable runtime. The installer and lifecycle acceptance script/receipts accompany the local delivery separately from runtime plugin contents.
