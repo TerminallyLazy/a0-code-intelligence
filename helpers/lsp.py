@@ -34,7 +34,7 @@ class LanguageServer:
         await self.peer.start(self.command, self.root, self.env)
         try:
             reply = await self.peer.request("initialize", {
-                "processId": None, "clientInfo": {"name": "Agent Zero Code Intelligence", "version": "0.2.1"},
+                "processId": None, "clientInfo": {"name": "Agent Zero Code Intelligence", "version": "0.2.2"},
                 "rootUri": self.root.as_uri(), "rootPath": str(self.root),
                 "workspaceFolders": [{"uri": self.root.as_uri(), "name": self.root.name}],
                 "capabilities": {
