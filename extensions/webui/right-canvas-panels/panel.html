@@ -1,0 +1,5 @@
+<div class="right-canvas-surface-panel" data-surface-id="code-intelligence" x-data
+     :class="{'is-active': $store.rightCanvas?.isSurfaceVisible('code-intelligence'), 'is-mounted': $store.rightCanvas?.isSurfaceRendered('code-intelligence')}"
+     :aria-hidden="(!$store.rightCanvas?.isSurfaceVisible('code-intelligence')).toString()">
+  <x-component path="/plugins/code_intelligence/webui/panel.html"></x-component>
+</div>

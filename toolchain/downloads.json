@@ -1,0 +1,12 @@
+{
+  "debugpy": {
+    "version": "1.8.22",
+    "url": "https://files.pythonhosted.org/packages/56/3d/c7dc9f35bc9e22cdb53679f844bee40fd5cff871862f60595869a433400d/debugpy-1.8.22-py2.py3-none-any.whl",
+    "sha256": "a9e9d3550e15ca479c59333e90845029190531f0cacfedab3b815a57bd913947"
+  },
+  "js-debug": {
+    "version": "1.140.0",
+    "url": "https://github.com/microsoft/vscode-js-debug/releases/download/v1.140.0/js-debug-dap-v1.140.0.tar.gz",
+    "sha256": "27dab92937ec1ab35821ae955aac867544fe06a1b6307229049f2d789af10968"
+  }
+}

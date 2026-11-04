@@ -1,0 +1,9 @@
+automatic_diagnostics: true
+post_edit_wait_ms: 750
+completion_wait_ms: 5000
+idle_seconds: 300
+python: /opt/venv/bin/python
+node: /usr/bin/node
+servers: {}
+adapters: {}
+debug_targets: {}

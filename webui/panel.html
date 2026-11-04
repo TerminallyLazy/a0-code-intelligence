@@ -1,0 +1,115 @@
+<html><head><title>Code Intelligence</title>
+<script type="module">import { store } from "/plugins/code_intelligence/webui/store.js";</script>
+<link rel="stylesheet" href="/plugins/code_intelligence/webui/code-intelligence.css">
+</head><body>
+<section class="ci-panel" :class="{'ci-floating': !$el.closest('.right-canvas-surface-panel')}" x-data="{ get ci() { return this.$store.codeIntelligence; }, destroy() { if (!this.$el.closest('.right-canvas-surface-panel')) this.ci.cleanup(); } }" x-init="if (!$el.closest('.right-canvas-surface-panel')) ci.mount()">
+  <header class="ci-head">
+    <div class="ci-mark" aria-hidden="true"><x-icon name="code_blocks"></x-icon></div>
+    <div class="ci-heading"><h2>Code Intelligence</h2><div class="ci-project"><x-icon name="folder_open"></x-icon><span x-text="ci.status?.scope.project || 'Select a project chat'"></span></div></div>
+    <button class="ci-icon-button" aria-label="Refresh Code Intelligence" title="Refresh" @click="ci.refresh()" :disabled="ci.busy"><x-icon name="refresh"></x-icon></button>
+  </header>
+  <nav class="ci-tabs" role="tablist" aria-label="Code Intelligence" @keydown="ci.switchTab($event)">
+    <template x-for="item in ci.tabs" :key="item.id"><button class="ci-tab" role="tab" :aria-selected="ci.tab === item.id" :tabindex="ci.tab === item.id ? 0 : -1" @click="ci.tab = item.id"><x-icon :name="item.icon"></x-icon><span x-text="item.label"></span><span class="ci-count" x-show="item.id === 'edits' && ci.pendingEdits" x-text="ci.pendingEdits"></span></button></template>
+  </nav>
+  <div class="ci-progress" x-show="ci.busy" role="status" aria-label="Working" x-cloak></div><div class="ci-progress-placeholder" x-show="!ci.busy"></div>
+  <div class="ci-body">
+  <section class="ci-page" role="tabpanel" aria-label="Diagnostics" x-show="ci.tab === 'diagnostics'">
+    <p class="ci-caption" role="status" x-show="ci.status?.workspace?.monitor" x-text="ci.monitorSummary"></p>
+    <div class="ci-stack">
+      <div class="ci-location">
+        <label class="ci-field"><span>Project file</span><input class="ci-file-input" aria-label="Project file" placeholder="src/main.py" x-model="ci.path" @keydown.enter="ci.inspect('diagnostics')" autocomplete="off" spellcheck="false"></label>
+        <label class="ci-field"><span>Line</span><input type="number" min="1" aria-label="Line" x-model.number="ci.line"></label>
+        <label class="ci-field"><span>Column</span><input type="number" min="1" aria-label="Column" x-model.number="ci.column"></label>
+      </div>
+      <div class="ci-query-row">
+        <button class="button confirm" @click="ci.inspect('diagnostics')" :disabled="ci.busy || !ci.path"><x-icon name="rule"></x-icon>Check file</button>
+        <select aria-label="Semantic query" x-model="ci.queryAction"><option value="references">Find references</option><option value="definition">Go to definition</option><option value="hover">Inspect symbol</option><option value="symbols">File symbols</option></select>
+        <button class="button" aria-label="Run semantic query" title="Run semantic query" @click="ci.inspect(ci.queryAction)" :disabled="ci.busy || !ci.path"><x-icon name="search"></x-icon></button>
+      </div>
+      <details class="ci-refactor"><summary><x-icon name="edit_note"></x-icon>Refactor &amp; code actions<x-icon name="chevron_right" class="ci-chevron"></x-icon></summary>
+        <div class="ci-stack"><label class="ci-field"><span>Rename symbol at the selected position</span><input aria-label="New symbol name" placeholder="New symbol name" x-model="ci.newName" spellcheck="false" @keydown.enter="ci.rename()"></label>
+        <div class="ci-row ci-wrap"><button class="button" @click="ci.rename()" :disabled="ci.busy || !ci.path || !ci.newName"><x-icon name="difference"></x-icon>Preview rename</button><button class="text-button" @click="ci.findActions()" :disabled="ci.busy || !ci.path"><x-icon name="lightbulb"></x-icon>Find code actions</button></div>
+        <div class="ci-box" x-show="ci.actions.length"><template x-for="action in ci.actions" :key="action.action_id"><button class="ci-result-row" @click="ci.propose(action)" :disabled="!!action.disabled || ci.busy"><x-icon name="lightbulb"></x-icon><span class="ci-grow" x-text="action.title"></span><x-icon name="chevron_right"></x-icon></button></template></div>
+        <p class="ci-caption" x-show="ci.actionsLoaded && !ci.actions.length">No code actions at this position.</p>
+        </div>
+      </details>
+    </div>
+    <div>
+      <div class="ci-section-heading"><h3>Diagnostics <span class="ci-count" x-text="ci.reports.length + (ci.reports.length===1 ? ' file' : ' files')"></span></h3><div class="ci-totals"><span><x-icon name="error" :class="{'ci-error':ci.errorCount}"></x-icon><span x-text="ci.errorCount"></span><span x-text="ci.errorCount===1?'error':'errors'"></span></span><span><x-icon name="warning" :class="{'ci-warning':ci.warningCount}"></x-icon><span x-text="ci.warningCount"></span><span x-text="ci.warningCount===1?'warning':'warnings'"></span></span></div></div>
+      <div class="ci-empty" x-show="!ci.reports.length"><x-icon name="data_check"></x-icon><h3>Ready to check your code</h3><p x-text="ci.status?.scope.semantic_trusted ? 'Choose a project file above. Diagnostics also update after you edit.' : 'Set up language tools and review project access to start checking files.'"></p><button class="button" x-show="!ci.status?.scope.semantic_trusted" @click="ci.tab='setup'"><x-icon name="tune"></x-icon>Open setup</button></div>
+      <template x-for="report in ci.reports" :key="report.path"><article class="ci-report">
+        <div class="ci-report-head"><button class="ci-file-link" @click="ci.openFile(report.path)" :title="report.path"><x-icon name="description"></x-icon><span x-text="ci.relative(report.path)"></span></button><span class="ci-badge" :data-state="report.status"><x-icon :name="ci.stateIcon(report.status)"></x-icon><span x-text="ci.title(report.status)"></span></span></div>
+        <p class="ci-inline-note" x-show="report.reason" x-text="report.reason"></p>
+        <template x-for="(item,index) in report.diagnostics || []" :key="index"><div class="ci-diagnostic">
+          <x-icon :name="ci.severityIcon(item)" :class="{'ci-error':item.severity===1,'ci-warning':item.severity===2,'ci-muted':item.severity>2}"></x-icon>
+          <div class="ci-diagnostic-text"><div class="ci-diagnostic-meta"><span x-text="ci.severity(item)"></span><code x-text="'Ln '+(item.range.start.line+1)+', Col '+(item.range.start.character+1)"></code><span x-text="item.source || ''"></span></div><p x-text="item.message"></p></div>
+          <button class="ci-icon-button" aria-label="Open diagnostic file" title="Open in editor" @click="ci.openFile(report.path)"><x-icon name="arrow_outward"></x-icon></button>
+        </div></template>
+        <div class="ci-inline-note" x-show="!report.diagnostics?.length"><x-icon :name="report.status==='current' ? 'check_circle' : 'info'"></x-icon><span x-text="report.status==='current' ? 'No diagnostics for this document version.' : 'No diagnostics reported. This is not a verified clean version.'"></span></div>
+      </article></template>
+    </div>
+    <section x-show="ci.queryResult && ci.queryKind !== 'diagnostics'">
+      <div class="ci-section-heading"><h3><x-icon name="manage_search"></x-icon><span x-text="ci.title(ci.queryKind)"></span></h3></div>
+      <div class="ci-box ci-result-list" x-show="ci.queryItems.length"><template x-for="(item,index) in ci.queryItems" :key="index"><button class="ci-result-row" @click="ci.openFile(item.path)"><x-icon name="description"></x-icon><span class="ci-grow" x-text="item.label"></span><code x-text="'Ln '+item.line"></code><x-icon name="arrow_outward"></x-icon></button></template></div>
+      <pre class="ci-pre" x-show="ci.hoverText" x-text="ci.hoverText"></pre><p class="ci-caption" x-show="!ci.queryItems.length && !ci.hoverText">No matching results at this position.</p>
+      <details><summary><x-icon name="data_object"></x-icon>Protocol details<x-icon name="chevron_right" class="ci-chevron"></x-icon></summary><pre class="ci-pre" x-text="JSON.stringify(ci.queryResult,null,2)"></pre></details>
+    </section>
+    <div class="ci-note"><x-icon name="info"></x-icon><p>Pending and unversioned reports do not confirm a clean edit. Columns follow the language server’s encoding, usually UTF-16.</p></div>
+  </section>
+
+  <section class="ci-page" role="tabpanel" aria-label="Edits" x-show="ci.tab === 'edits'" x-cloak>
+    <div><div class="ci-section-heading"><h3>Review changes</h3><span class="ci-caption" x-text="ci.pendingEdits + ' pending'"></span></div><p class="ci-caption">Server-generated edits, checked against the files you reviewed.</p></div>
+    <div class="ci-empty" x-show="!ci.proposals.length"><x-icon name="difference"></x-icon><h3>No proposed changes</h3><p>Preview a rename or code action from Diagnostics. Review the diff here before applying it.</p><button class="button" @click="ci.tab='diagnostics'"><x-icon name="arrow_back"></x-icon>Go to diagnostics</button></div>
+    <template x-for="proposal in ci.proposals" :key="proposal.id"><article class="ci-proposal">
+      <div class="ci-proposal-head"><x-icon name="difference"></x-icon><div class="ci-grow"><h3 x-text="proposal.title"></h3><div class="ci-proposal-meta"><span x-text="proposal.files.length+' '+(proposal.files.length===1?'file':'files')"></span><span x-text="ci.expiry(proposal.expires_in_seconds)"></span></div></div><span class="ci-badge" x-text="ci.title(proposal.status)"></span></div>
+      <template x-for="file in proposal.files" :key="file.path"><details class="ci-diff-file" open><summary><x-icon name="description"></x-icon><code x-text="file.path"></code><x-icon name="chevron_right" class="ci-chevron"></x-icon></summary>
+        <pre class="ci-diff"><template x-for="(line,index) in file.diff.split('\n')" :key="index"><code class="ci-diff-line" :class="ci.diffClass(line)" x-text="line || ' '"></code></template></pre><p class="ci-inline-note" x-show="file.truncated">Preview truncated. Inspect the complete file before applying.</p>
+      </details></template>
+      <footer class="ci-proposal-footer"><button class="button confirm" @click="ci.apply(proposal)" :disabled="proposal.status!=='proposed' || proposal.expires_in_seconds===0 || ci.busy"><x-icon name="done_all"></x-icon><span x-text="proposal.status==='applied'?'Edits applied':'Apply reviewed edits'"></span></button></footer>
+    </article></template>
+    <div class="ci-note" x-show="ci.proposals.length"><x-icon name="lock_clock"></x-icon><p>Changes expire after ten minutes. Apply checks every file again and rejects edits if the source has changed.</p></div>
+  </section>
+
+  <section class="ci-page" role="tabpanel" aria-label="Debugger" x-show="ci.tab === 'debugger'" x-cloak>
+    <div class="ci-stack"><div class="ci-debug-target"><label class="ci-field"><span>Debug target</span><select aria-label="Debug target" x-model="ci.target" :disabled="ci.activeDebug"><option value="">Select a target</option><template x-for="name in Object.keys(ci.status?.scope.debug_targets || {})" :key="name"><option :value="name" x-text="name"></option></template></select></label><button class="button confirm" @click="ci.launch()" :disabled="!ci.target || ci.busy || ci.activeDebug || !ci.status?.scope.debug_trusted"><x-icon name="play_arrow"></x-icon>Launch</button></div>
+      <div class="ci-breakpoints"><label class="ci-field"><span>Breakpoint file</span><input class="ci-file-input" aria-label="Breakpoint file" placeholder="src/main.py" x-model="ci.breakpointPath" :disabled="ci.activeDebug" spellcheck="false"></label><label class="ci-field"><span>Lines</span><input aria-label="Breakpoint lines" placeholder="2, 8" x-model="ci.breakpointLines" :disabled="ci.activeDebug"></label></div>
+      <p class="ci-caption" x-show="!ci.status?.scope.debug_trusted">Review debugging access in Setup before launching a target.</p>
+    </div>
+    <div class="ci-empty" x-show="!ci.session"><x-icon name="bug_report"></x-icon><h3>Inspect your program as it runs</h3><p>Select a configured target and optional breakpoints. Launch to inspect its stack and variables.</p><button class="button" x-show="!ci.status?.scope.debug_trusted" @click="ci.tab='setup'"><x-icon name="tune"></x-icon>Review access</button></div>
+    <template x-if="ci.session"><div class="ci-stack">
+      <div class="ci-debug-bar"><span class="ci-badge" :data-state="ci.session.state"><x-icon :name="ci.stateIcon(ci.session.state)"></x-icon><span x-text="ci.title(ci.session.state)"></span></span><div class="ci-debug-buttons" role="group" aria-label="Debugger execution controls"><template x-for="control in ci.controls" :key="control.action"><button class="ci-icon-button" :class="{'ci-stop':control.action==='stop','ci-continue':control.action==='continue'}" :aria-label="control.label" :title="control.label" @click="ci.control(control.action)" :disabled="ci.controlDisabled(control.action)"><x-icon :name="control.icon"></x-icon></button></template></div></div>
+      <div class="ci-debug-grid">
+        <section><div class="ci-section-heading"><h3><x-icon name="layers"></x-icon>Call stack</h3><button class="ci-icon-button" aria-label="Refresh call stack" title="Refresh call stack" @click="ci.run(() => ci.loadStopped())" :disabled="!ci.stopped || ci.busy"><x-icon name="refresh"></x-icon></button></div>
+          <div class="ci-box ci-frames"><template x-for="(frame,index) in ci.frames" :key="frame.id"><button class="ci-result-row ci-frame" :aria-current="ci.selectedFrame===frame.id" @click="ci.selectFrame(frame)" :disabled="ci.busy"><span class="ci-frame-index" x-text="index"></span><div class="ci-grow"><span class="ci-frame-title" x-text="frame.name"></span><span class="ci-frame-source" :title="frame.source?.path" x-text="ci.relative(frame.source?.path)+':'+frame.line"></span></div><x-icon name="chevron_right"></x-icon></button></template><p class="ci-inline-note" x-show="!ci.frames.length" x-text="ci.stopped ? 'No stack frames reported.' : 'Pause at a breakpoint to inspect the call stack.'"></p></div>
+        </section>
+        <section><div class="ci-section-heading"><h3><x-icon name="data_object"></x-icon>Variables</h3><span class="ci-caption" x-text="ci.selectedScope || ''"></span></div>
+          <div class="ci-box"><div class="ci-scopes" x-show="ci.scopes.length"><template x-for="scope in ci.scopes" :key="scope.name"><button :aria-pressed="ci.selectedScope===scope.name" @click="ci.selectScope(scope)" :disabled="ci.busy" x-text="scope.name"></button></template></div>
+            <button class="text-button ci-back" x-show="ci.variableHistory.length" @click="ci.backVariables()"><x-icon name="arrow_back"></x-icon><span x-text="ci.variableHistory.at(-1)?.name"></span></button>
+            <div class="ci-variable-scroll" x-show="ci.variables.length"><table class="ci-variables"><thead><tr><th>Name</th><th>Value</th></tr></thead><tbody><template x-for="(variable,index) in ci.variables" :key="index"><tr><td><button class="ci-variable-name" @click="ci.expandVariable(variable)" :disabled="!variable.variablesReference || ci.busy"><x-icon :name="variable.variablesReference ? 'chevron_right' : 'remove'"></x-icon><span x-text="variable.name"></span></button></td><td class="ci-variable-value" x-text="variable.value || '—'"></td></tr></template></tbody></table></div><p class="ci-inline-note" x-show="!ci.variables.length" x-text="ci.stopped ? 'Select a stack frame and scope to inspect variables.' : 'Variables are available while the program is paused.'"></p>
+          </div>
+        </section>
+      </div>
+      <details><summary><x-icon name="adjust"></x-icon>Breakpoint verification<x-icon name="chevron_right" class="ci-chevron"></x-icon></summary><pre class="ci-pre" x-text="JSON.stringify(ci.session.breakpoints,null,2)"></pre></details>
+      <section><div class="ci-section-heading"><h3><x-icon name="terminal"></x-icon>Output</h3><button class="ci-icon-button" aria-label="Refresh program output" title="Refresh output" @click="ci.debugRead('output')" :disabled="ci.busy"><x-icon name="refresh"></x-icon></button></div><pre class="ci-pre ci-console" x-text="ci.output"></pre></section>
+    </div></template>
+  </section>
+
+  <section class="ci-page" role="tabpanel" aria-label="Setup" x-show="ci.tab === 'setup'" x-cloak>
+    <section class="ci-setup-section"><div class="ci-section-heading"><h3><x-icon name="dns"></x-icon>Project environment</h3><span class="ci-badge">Docker</span></div>
+      <div class="ci-box"><dl class="ci-keyvalues"><dt>Project</dt><dd x-text="ci.status?.scope.project || 'Select a project chat'"></dd><dt>Location</dt><dd><code x-text="ci.status?.scope.root || '—'"></code></dd><dt>Python</dt><dd><code x-text="ci.status?.scope.python || '—'"></code></dd><dt>Node.js</dt><dd><code x-text="ci.status?.scope.node || '—'"></code></dd></dl></div>
+      <p class="ci-caption">Choose interpreters and debug targets in this project’s plugin settings.</p>
+    </section>
+    <section class="ci-setup-section"><div class="ci-section-heading"><h3><x-icon name="deployed_code"></x-icon>Language tools</h3><span class="ci-badge"><x-icon :name="ci.status?.tools.installed ? 'check_circle' : 'download'"></x-icon><span x-text="ci.status?.tools.installed ? 'Installed' : 'Setup required'"></span></span></div>
+      <ul class="ci-box ci-tools"><template x-for="(version,name) in ci.status?.tools.npm || {}" :key="name"><li><span x-text="name"></span><code x-text="version"></code></li></template><template x-for="(info,name) in ci.status?.tools.versions || {}" :key="name"><li><span x-text="name==='js-debug' ? 'vscode-js-debug' : name"></span><code x-text="info.version || 'Pinned release'"></code></li></template></ul>
+      <div><button class="button" @click="ci.setup()" :disabled="ci.busy || !ci.status"><x-icon name="download"></x-icon><span x-text="ci.status?.tools.installed ? 'Reinstall pinned tools' : 'Set up pinned tools'"></span></button></div><p class="ci-caption">Installed in plugin-owned storage. Project and global dependencies stay unchanged. Reinstalling stops active sessions.</p>
+    </section>
+    <section class="ci-setup-section"><div class="ci-section-heading"><h3><x-icon name="verified_user"></x-icon>Project access</h3></div>
+      <div class="ci-box"><div class="ci-access"><x-icon name="code"></x-icon><div class="ci-grow"><div class="ci-row ci-between"><h3>Semantic tools</h3><span class="ci-badge" x-text="ci.status?.scope.semantic_trusted ? 'Allowed' : 'Review required'"></span></div><p>Diagnostics, navigation and edit proposals. Language servers may load project configuration and plugins.</p><button class="button" @click="ci.grant('semantic', !ci.status.scope.semantic_trusted)" :disabled="!ci.status || ci.busy"><x-icon :name="ci.status?.scope.semantic_trusted ? 'lock' : 'lock_open'"></x-icon><span x-text="ci.status?.scope.semantic_trusted ? 'Revoke semantic access' : 'Allow semantic tools'"></span></button></div></div>
+      <div class="ci-access"><x-icon name="bug_report"></x-icon><div class="ci-grow"><div class="ci-row ci-between"><h3>Debugging</h3><span class="ci-badge" x-text="ci.status?.scope.debug_trusted ? 'Allowed' : 'Review required'"></span></div><p>Launch configured targets and inspect execution. Debugging runs project code in this runtime.</p><button class="button" @click="ci.grant('debug', !ci.status.scope.debug_trusted)" :disabled="!ci.status || ci.busy"><x-icon :name="ci.status?.scope.debug_trusted ? 'lock' : 'lock_open'"></x-icon><span x-text="ci.status?.scope.debug_trusted ? 'Revoke debugging access' : 'Allow configured targets'"></span></button></div></div></div>
+      <p class="ci-caption">Access applies to this project, profile, environment and tool configuration. Changes require a new review.</p>
+    </section>
+    <details><summary><x-icon name="settings"></x-icon>Full configuration<x-icon name="chevron_right" class="ci-chevron"></x-icon></summary><pre class="ci-pre" x-text="JSON.stringify(ci.status?.scope,null,2)"></pre></details>
+    <div class="ci-note"><x-icon name="info"></x-icon><p>Project files and tools must share this Docker runtime. Remote Connector and split-host development are not supported in this release.</p></div>
+  </section>
+  </div>
+</section></body></html>
