@@ -1,0 +1,9 @@
+name: code_intelligence
+title: Code Intelligence
+description: Language-server diagnostics, semantic edits, and project debugging.
+version: 0.2.1
+settings_sections:
+  - agent
+per_project_config: true
+per_agent_config: true
+always_enabled: false
