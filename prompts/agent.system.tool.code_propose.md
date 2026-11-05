@@ -1,5 +1,5 @@
 ### code_propose
-Prepare semantic edits without changing files. Uses the same project trust as code_inspect.
+Prepare semantic edits without changing files. Uses the same workspace trust as code_inspect.
 Rename: action=rename, path, line, column, new_name.
 Quick fixes: action=actions, path, line, column. Then action=resolve_action, path, action_id to preview a supported action.
 Returns proposal ID, affected files, digests and diffs. Review correctness before applying. Proposals expire after 10 minutes and reject changed files. Existing-file text edits only; executable commands and file resource operations are unsupported.

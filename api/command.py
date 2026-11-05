@@ -10,7 +10,7 @@ class Command(ApiHandler):
         try:
             context_id = input.get("context_id")
             if not isinstance(context_id, str) or not context_id:
-                raise ValueError("Select a chat in the intended project")
+                raise ValueError("Select a chat before using Code Intelligence")
             context = self.use_context(context_id, create_if_not_exists=False)
             if context is None:
                 raise ValueError("Unknown chat context")
@@ -25,7 +25,7 @@ class Command(ApiHandler):
                 elif operation == "setup":
                     if input.get("confirm") is not True:
                         raise ValueError("Explicit setup confirmation is required")
-                    await asyncio.to_thread(lifecycle.install, force=True)
+                    await asyncio.to_thread(lifecycle.install, force=True, refresh_modules=False)
                     scope = access.resolve(agent, tool, require_trust=False)
                 elif operation == "close":
                     await asyncio.to_thread(service.shutdown)

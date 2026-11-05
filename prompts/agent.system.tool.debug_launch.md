@@ -1,5 +1,5 @@
 ### debug_launch
-Start one configured project debug target after project debugging is trusted in the UI.
+Start one configured workspace debug target after workspace debugging is trusted in the UI.
 Arguments: target (configured name), breakpoints (optional [{path, lines:[positive line numbers]}]).
 Python and Node.js supported; TypeScript uses compiled JavaScript plus source maps. No arbitrary command, attach address, PID, evaluation or environment overrides.
 Returns session_id, state and stop_generation. A running launch is not yet a verified breakpoint stop. Use debug_inspect status. Debuggee execution and variable rendering can have side effects.

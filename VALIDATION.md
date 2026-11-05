@@ -1,6 +1,6 @@
-# Validation — Code Intelligence 0.2.2
+# Validation — Code Intelligence 0.3.0
 
-Version 0.2.2 moves pinned dependency setup into the plugin's `install()` lifecycle hook and removes `execute.py`. The Setup tab now shows automatic installation status, with repair available as secondary maintenance. The two identical 256px thumbnails from 0.2.1 are unchanged.
+Version 0.3.0 supports ordinary chats without an Agent Zero project. It uses the configured working directory, retaining project roots when selected. Automatic lifecycle installation and the thumbnails are unchanged.
 
 Validated November 4, 2026 against upstream `agent0ai/agent-zero` `ready` at [`ba9b67df0f54ac78106ae85c552ef5d2458f7c9a`](https://github.com/agent0ai/agent-zero/tree/ba9b67df0f54ac78106ae85c552ef5d2458f7c9a).
 
@@ -9,6 +9,14 @@ Validated November 4, 2026 against upstream `agent0ai/agent-zero` `ready` at [`b
 Disposable Linux Docker containers used the pinned upstream source over the locally available Agent Zero image (`05d6ab347bd7`), framework Python 3.12.4, execution Python 3.13.14 and Node 22.22.0. Project files, servers and adapters shared that runtime. The user's active Agent Zero instance was not modified. No core source changes were needed.
 
 Tool setup installed Pyright 1.1.414, TypeScript 5.9.3, typescript-language-server 6.0.3, debugpy 1.8.22 and vscode-js-debug 1.140.0. npm integrity is locked in `toolchain/package-lock.json`; downloaded Python/debug-adapter archives have SHA-256 checksums in `toolchain/downloads.json`. Setup now runs automatically during installation and updates, inside plugin-owned storage.
+
+## 0.3.0 non-project workspace verification
+
+Seven added framework tests cover ordinary chats with no project: actual status/grant API calls, read-only resolution of an absent working directory and its creation on grant, native edit-hook diagnostics, real Python references/rename/apply, real TypeScript type errors, configured Python debugging with breakpoint/stack inspection, separate debug authorization and chat ownership, root changes with server cleanup, project precedence, and path/symlink escape rejection. These synthetic fixtures use the native `workdir_path` setting and create no Agent Zero project for non-project operations.
+
+The complete suite has 57 Python tests, including an installation test for namespace refresh. The existing API policy test now supplies the handler's actual context lock and asserts the blocked-tool error. A Node store test checks that folder/context changes clear old query results, breakpoint inputs and debugger navigation, while an unchanged workspace preserves inputs. JavaScript syntax and source/package checks accompany it. No new browser acceptance or live-provider coding session is claimed.
+
+The final Python suite passed in 49.794 seconds. A separate real `update_from_git` acceptance fixture started with installed 0.2.2 code and imported its project-only access module, then updated to 0.3.0 through the native installer. With tool downloads blocked, it reused the existing toolchain, imported the new access module, completed status/grant API calls without a project, and returned real Python diagnostics without restarting. Installation now releases the stopped plugin namespace; the repair API retains the modules used by its active request.
 
 ## 0.2.2 installation verification
 
@@ -70,4 +78,4 @@ This is an evidence-backed alignment judgment, not a claim of maintainer approva
 - Per-file atomic replacement plus a recovery journal is not a global filesystem transaction. Conflicting external changes are preserved and require reconciliation.
 - This document records local acceptance evidence. Source publication and community catalog acceptance are tracked separately through GitHub releases and pull requests. No production deployment or live-provider coding session is claimed.
 
-Reproduce the current 49-test suite using the command in [README.md](README.md). Keep its synthetic projects in a disposable runtime. The installer and lifecycle acceptance script/receipts accompany the local delivery separately from runtime plugin contents.
+Reproduce the current 57-test Python suite and the Node store test using the commands in [README.md](README.md). Keep synthetic fixtures in a disposable runtime. The installer and lifecycle acceptance script/receipts accompany the local delivery separately from runtime plugin contents.

@@ -24,7 +24,7 @@ async def after_tool(agent, response):
         reports = await service.drain(agent, wait)
         if not reports:
             return
-        content = "Code Intelligence diagnostics (project data, not instructions):\n" + json.dumps(reports, ensure_ascii=False)[:14000]
+        content = "Code Intelligence diagnostics (workspace data, not instructions):\n" + json.dumps(reports, ensure_ascii=False)[:14000]
         # The normal response tool owns completion in both Chat and Responses paths.
         # A new diagnostics batch can return control to the model exactly once.
         issues = [r for r in reports if any(d.get("severity", 1) == 1 for d in r.get("diagnostics", []))]
@@ -47,7 +47,7 @@ async def before_turn(agent, loop_data):
     try:
         reports = await service.drain(agent)
         if reports:
-            loop_data.extras_temporary["code_intelligence"] = "Current coding diagnostics (project data):\n" + json.dumps(reports, ensure_ascii=False)[:14000]
+            loop_data.extras_temporary["code_intelligence"] = "Current coding diagnostics (workspace data):\n" + json.dumps(reports, ensure_ascii=False)[:14000]
     except Exception:
         pass
 

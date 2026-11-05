@@ -17,26 +17,31 @@ _lock = threading.RLock()
 @dataclass(frozen=True)
 class Scope:
     owner: str
-    project: str
+    project: str | None
     root: Path
     fingerprint: str
     config: dict
 
 
 def resolve(agent, tool="code_inspect", require_trust=True):
-    from helpers import plugins, projects, runtime, files
+    from helpers import plugins, projects, runtime, files, settings
     from helpers.tool_policy import ensure_tool_allowed
     if tool not in TOOLS:
         raise ValueError("Unknown Code Intelligence tool")
     if NAME not in plugins.get_enabled_plugins(agent):
-        raise PermissionError("Code Intelligence is disabled for this project/profile")
+        raise PermissionError("Code Intelligence is disabled for this chat/profile")
     ensure_tool_allowed(agent, tool)
     if not runtime.is_dockerized():
-        raise ValueError("Unsupported execution location: enable this plugin in the Docker runtime beside the project files")
-    project = projects.get_context_project_name(agent.context)
-    if not project:
-        raise ValueError("Select an Agent Zero project before using Code Intelligence")
-    root = Path(files.get_abs_path(projects.get_project_folder(project))).resolve(strict=True)
+        raise ValueError("Unsupported execution location: enable this plugin in the Docker runtime beside the workspace files")
+    project = projects.get_context_project_name(agent.context) or None
+    # Match native code execution and the chat file browser: a project's root,
+    # otherwise Agent Zero's configured working directory. Never guess from cwd.
+    folder = projects.get_project_folder(project) if project else settings.get_settings().get("workdir_path")
+    if not isinstance(folder, str) or not folder.strip():
+        raise ValueError("Configure Agent Zero's working directory before using Code Intelligence")
+    root = Path(files.get_abs_path(files.normalize_a0_path(folder))).resolve(strict=bool(project))
+    if root.exists() and not root.is_dir():
+        raise ValueError("The coding workspace must be a directory")
     config = {**(plugins.get_default_plugin_config(NAME) or {}),
               **(plugins.get_plugin_config(NAME, agent=agent) or {})}
     if any(not isinstance(config.get(key, {}), dict) for key in ("servers", "adapters", "debug_targets")):
@@ -70,11 +75,15 @@ def resolve(agent, tool="code_inspect", require_trust=True):
                     executables[f"{name}:{index}"] = [str(candidate.resolve()), info.st_size, info.st_mtime_ns]
     identity = {"root": str(root), "profile": agent.config.profile, "config": config,
                 "executables": executables, "tools": digest(receipt.read_bytes()) if receipt.is_file() else "missing"}
+    if not project:
+        # Keep existing project grants valid, but never inherit them just because
+        # the global working directory happens to point at the same folder.
+        identity["workspace_kind"] = "workdir"
     fingerprint = digest(json.dumps(identity, sort_keys=True))
     scope = Scope(str(agent.context.id) + ":" + str(agent.number), project, root, fingerprint, config)
     kind = "debug" if tool.startswith("debug_") else "semantic"
     if require_trust and not trusted(scope, kind):
-        raise PermissionError(f"Project {kind} tools are not trusted for this configuration; review access in Code Intelligence")
+        raise PermissionError(f"Workspace {kind} tools are not trusted for this configuration; review access in Code Intelligence")
     return scope
 
 
@@ -92,7 +101,11 @@ def trusted(scope, kind):
 
 def grant(scope, kind, fingerprint, enabled):
     if kind not in ("semantic", "debug") or fingerprint != scope.fingerprint:
-        raise ValueError("Access review is stale; refresh the project status")
+        raise ValueError("Access review is stale; refresh the workspace status")
+    if enabled and not scope.project:
+        # Status is read-only. Prepare the configured folder only after review,
+        # like native execution does before using a new working directory.
+        scope.root.mkdir(parents=True, exist_ok=True)
     with _lock:
         DATA.mkdir(mode=0o700, parents=True, exist_ok=True)
         values = grants()
@@ -105,7 +118,9 @@ def grant(scope, kind, fingerprint, enabled):
 
 
 def public(scope):
-    return {"project": scope.project, "root": str(scope.root), "execution_location": "Agent Zero Docker runtime",
+    return {"project": scope.project, "workspace_kind": "project" if scope.project else "workdir",
+            "workspace_label": scope.project or "Working directory",
+            "root": str(scope.root), "execution_location": "Agent Zero Docker runtime",
             "fingerprint": scope.fingerprint, "semantic_trusted": trusted(scope, "semantic"),
             "debug_trusted": trusted(scope, "debug"), "python": scope.config["python"], "node": scope.config["node"],
             "servers": scope.config.get("servers", {}), "adapters": scope.config.get("adapters", {}),
