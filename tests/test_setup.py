@@ -143,6 +143,17 @@ class Installation(unittest.TestCase):
                 hooks.install(force=True)
         self.assertEqual(events, ["stop", ("install", True)])
 
+    def test_install_refreshes_stopped_namespace_but_repair_keeps_request_modules(self):
+        from helpers import modules
+        with patch.object(hooks, "shutdown"), \
+             patch.object(hooks.runpy, "run_path", return_value={"setup_tools": lambda **kw: {"installed": True}}), \
+             patch.object(modules, "purge_namespace") as refresh:
+            self.assertTrue(hooks.install()["installed"])
+            refresh.assert_called_once_with("usr.plugins.code_intelligence")
+            refresh.reset_mock()
+            hooks.install(force=True, refresh_modules=False)
+            refresh.assert_not_called()
+
     def test_pre_update_reloads_hooks_and_preserves_recovery_gate(self):
         cache.add(plugins.HOOKS_CACHE_AREA, "code_intelligence", object())
         self.addCleanup(cache.remove, plugins.HOOKS_CACHE_AREA, "code_intelligence")

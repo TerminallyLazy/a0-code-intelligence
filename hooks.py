@@ -10,12 +10,18 @@ def preserve_recovery():
         raise RuntimeError("Resolve Code Intelligence recovery journals before updating or uninstalling; original files are preserved under " + str(DATA / "recovery"))
 
 
-def install(force=False, **kwargs):
+def install(force=False, refresh_modules=True, **kwargs):
     shutdown()
     # Updates can retain imported helpers until after installation. Load setup
     # from the newly installed source, including its current pins and checks.
     setup = runpy.run_path(str(Path(__file__).parent / "helpers/setup.py"))
-    return setup["setup_tools"](force=force)
+    result = setup["setup_tools"](force=force)
+    if refresh_modules:
+        # The native Git updater clears caches without refreshing Python modules.
+        # Release our stopped namespace so the next request imports updated code.
+        from helpers import modules
+        modules.purge_namespace("usr.plugins.code_intelligence")
+    return result
 
 
 def pre_update(**kwargs):

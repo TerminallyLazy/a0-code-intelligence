@@ -2,9 +2,9 @@
 <div x-data="{parse(key, value) { try { config[key] = JSON.parse(value); } catch { globalThis.toastFrontendError('Enter a valid JSON object.', 'Code Intelligence'); } }}">
 <template x-if="config"><div>
   <div class="section-title">Code Intelligence</div>
-  <div class="section-description">Choose the project environment and debug targets. Use the Code Intelligence surface to install tools and review project access.</div>
+  <div class="section-description">Choose interpreters and debug targets for the active workspace. Without a project, Code Intelligence uses Agent Zero’s working directory. Tools install automatically; review workspace access in the Code Intelligence surface.</div>
   <div class="field"><div class="field-label">Automatic diagnostics after edits</div><div class="field-control"><input type="checkbox" x-model="config.automatic_diagnostics"></div></div>
-  <div class="field"><div class="field-label">Project Python executable</div><div class="field-control"><input type="text" x-model="config.python" placeholder="/opt/venv/bin/python"></div></div>
+  <div class="field"><div class="field-label">Python executable</div><div class="field-control"><input type="text" x-model="config.python" placeholder="/opt/venv/bin/python"></div></div>
   <div class="field"><div class="field-label">Node executable</div><div class="field-control"><input type="text" x-model="config.node" placeholder="/usr/bin/node"></div></div>
   <div class="field"><div class="field-label">Debug targets</div><div class="field-control"><textarea rows="8" :value="JSON.stringify(config.debug_targets,null,2)" @change="parse('debug_targets',$event.target.value)" placeholder='{"example":{"type":"python","program":"main.py","args":[]}}'></textarea></div></div>
   <details><summary>Advanced</summary>
@@ -13,6 +13,6 @@
     <div class="field"><div class="field-label">Post-edit wait (milliseconds)</div><div class="field-control"><input type="number" min="0" max="2000" x-model.number="config.post_edit_wait_ms"></div></div>
     <div class="field"><div class="field-label">Completion wait (milliseconds)</div><div class="field-control"><input type="number" min="0" max="5000" x-model.number="config.completion_wait_ms"></div></div>
     <div class="field"><div class="field-label">Language-server idle timeout (seconds; 0 keeps servers warm)</div><div class="field-control"><input type="number" min="0" max="3600" x-model.number="config.idle_seconds"></div></div>
-    <div class="section-description">Project monitoring continues while language servers sleep. A saved change wakes the relevant server. Debug sessions retain a separate idle cleanup.</div>
+    <div class="section-description">Workspace monitoring continues while language servers sleep. A saved change wakes the relevant server. Debug sessions retain a separate idle cleanup.</div>
   </details>
 </div></template></div></body></html>

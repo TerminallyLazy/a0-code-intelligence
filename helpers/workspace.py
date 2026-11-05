@@ -21,15 +21,15 @@ def project_file(root: Path, value: str, exists=True):
             raise ValueError("Only local file URIs are supported")
         value = unquote(parsed.path)
     elif "://" in value:
-        raise ValueError("Only project files are supported")
+        raise ValueError("Only workspace files are supported")
     candidate = Path(value)
     path = (candidate if candidate.is_absolute() else root / candidate).resolve()
     if not path.is_relative_to(root) or path == root:
-        raise ValueError("File is outside the selected project")
+        raise ValueError("File is outside the active workspace")
     if any(part in EXCLUDED for part in path.relative_to(root).parts):
         raise ValueError("File is inside an excluded directory")
     if exists and not path.is_file():
-        raise ValueError("Project file does not exist")
+        raise ValueError("Workspace file does not exist")
     return path
 
 
@@ -54,7 +54,7 @@ def snapshot(root: Path, extra_suffixes=()):
             text = read_text(path)
             size += len(text.encode())
             if len(result) >= 5000 or size > 64 * 1024 * 1024:
-                raise ValueError("Project exceeds semantic-edit snapshot limit (5000 files / 64 MiB)")
+                raise ValueError("Workspace exceeds semantic-edit snapshot limit (5000 files / 64 MiB)")
             result[str(path)] = text
     return result
 

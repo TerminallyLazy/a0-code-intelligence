@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 import shutil
 import time
+import threading
 import unittest
 import uuid
 from unittest.mock import AsyncMock, patch
@@ -105,10 +106,11 @@ class Framework(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(Exception):
             await service.dispatch(self.agent, "code_apply", {"proposal_id": "unknown"})
         self.assertFalse(tool_policy.resolve_tool(self.agent, "code_apply").allowed)
-        api = Command(None, None)
+        api = Command(None, threading.RLock())
         result = await api.process({"operation": "tool", "context_id": self.context.id,
                                     "tool": "code_apply", "args": {"proposal_id": "unknown"}}, None)
         self.assertFalse(result["ok"])
+        self.assertIn('Tool "code_apply" is blocked', result["error"])
         self.assertTrue(Command.requires_auth())
         self.assertTrue(Command.requires_csrf())
 

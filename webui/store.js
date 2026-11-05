@@ -28,7 +28,7 @@ export const store = createStore("codeIntelligence", {
     const workspace = this.status?.workspace;
     if (!workspace?.monitor?.active) return "Automatic diagnostics are paused.";
     const count = (workspace.servers || []).filter(s => !s.failed).length;
-    return count ? `Watching project changes · ${count} language server${count === 1 ? "" : "s"} running` : "Watching project changes · servers start when needed";
+    return count ? `Watching workspace changes · ${count} language server${count === 1 ? "" : "s"} running` : "Watching workspace changes · servers start when needed";
   },
   get proposals() { return this.status?.workspace?.proposals || []; },
   get pendingEdits() { return this.proposals.filter(p => p.status === "proposed" && p.expires_in_seconds > 0).length; },
@@ -67,7 +67,7 @@ export const store = createStore("codeIntelligence", {
   },
   async request(operation, more = {}) {
     const context = globalThis.getContext?.();
-    if (!context) throw new Error("Select a chat in the intended project.");
+    if (!context) throw new Error("Select a chat before using Code Intelligence.");
     const result = await callJsonApi("plugins/code_intelligence/command", { context_id: context, operation, ...more });
     if (!result.ok) throw new Error(result.error || "Code Intelligence request failed.");
     if (context !== globalThis.getContext?.()) throw new Error("The selected chat changed. Refresh before continuing.");
@@ -80,15 +80,23 @@ export const store = createStore("codeIntelligence", {
     catch (error) { toastFrontendError(String(error.message || error), "Code Intelligence"); }
     finally { this.busy = false; }
   },
+  resetWorkspaceView() {
+    this.session = null; this.frames = []; this.scopes = []; this.variables = [];
+    this.actions = []; this.queryResult = null; this.target = "";
+    this.path = ""; this.breakpointPath = ""; this.newName = ""; this.output = "";
+    this.line = 1; this.column = 1; this.breakpointLines = "";
+    this.actionsLoaded = false; this.queryKind = "";
+    this.selectedFrame = null; this.selectedScope = null; this.variableHistory = [];
+  },
   async refresh(silent = false) {
     const refresh = async () => {
       const context = globalThis.getContext?.();
       if (context !== this.context) {
-        this.status = null; this.session = null; this.frames = []; this.scopes = []; this.variables = [];
-        this.actions = []; this.queryResult = null; this.context = context; this.target = "";
-        this.path = ""; this.breakpointPath = ""; this.newName = ""; this.output = "";
+        this.status = null; this.context = context; this.resetWorkspaceView();
       }
-      this.status = await this.request("status");
+      const status = await this.request("status");
+      if (this.status && this.status.scope.fingerprint !== status.scope.fingerprint) this.resetWorkspaceView();
+      this.status = status;
       if (!this.path && this.reports.length) this.path = this.relative(this.reports[0].path);
       if (!this.target) this.target = Object.keys(this.status.scope.debug_targets || {})[0] || "";
       const sessions = this.status.workspace?.debuggers || [];
@@ -121,7 +129,7 @@ export const store = createStore("codeIntelligence", {
   async grant(kind, enabled) {
     await this.run(async () => {
       this.status = await this.request("grant", { kind, enabled, fingerprint: this.status.scope.fingerprint });
-      toastFrontendSuccess(enabled ? "Project access saved." : "Project access revoked.", "Code Intelligence");
+      toastFrontendSuccess(enabled ? "Workspace access saved." : "Workspace access revoked.", "Code Intelligence");
     });
   },
   async tool(tool, args) { return (await this.request("tool", { tool, args })).result; },

@@ -5,7 +5,7 @@
 <section class="ci-panel" :class="{'ci-floating': !$el.closest('.right-canvas-surface-panel')}" x-data="{ get ci() { return this.$store.codeIntelligence; }, destroy() { if (!this.$el.closest('.right-canvas-surface-panel')) this.ci.cleanup(); } }" x-init="if (!$el.closest('.right-canvas-surface-panel')) ci.mount()">
   <header class="ci-head">
     <div class="ci-mark" aria-hidden="true"><x-icon name="code_blocks"></x-icon></div>
-    <div class="ci-heading"><h2>Code Intelligence</h2><div class="ci-project"><x-icon name="folder_open"></x-icon><span x-text="ci.status?.scope.project || 'Select a project chat'"></span></div></div>
+    <div class="ci-heading"><h2>Code Intelligence</h2><div class="ci-project"><x-icon name="folder_open"></x-icon><span x-text="ci.status?.scope.workspace_label || 'Select a chat'"></span></div></div>
     <button class="ci-icon-button" aria-label="Refresh Code Intelligence" title="Refresh" @click="ci.refresh()" :disabled="ci.busy"><x-icon name="refresh"></x-icon></button>
   </header>
   <nav class="ci-tabs" role="tablist" aria-label="Code Intelligence" @keydown="ci.switchTab($event)">
@@ -17,7 +17,7 @@
     <p class="ci-caption" role="status" x-show="ci.status?.workspace?.monitor" x-text="ci.monitorSummary"></p>
     <div class="ci-stack">
       <div class="ci-location">
-        <label class="ci-field"><span>Project file</span><input class="ci-file-input" aria-label="Project file" placeholder="src/main.py" x-model="ci.path" @keydown.enter="ci.inspect('diagnostics')" autocomplete="off" spellcheck="false"></label>
+        <label class="ci-field"><span>Workspace file</span><input class="ci-file-input" aria-label="Workspace file" placeholder="src/main.py" x-model="ci.path" @keydown.enter="ci.inspect('diagnostics')" autocomplete="off" spellcheck="false"></label>
         <label class="ci-field"><span>Line</span><input type="number" min="1" aria-label="Line" x-model.number="ci.line"></label>
         <label class="ci-field"><span>Column</span><input type="number" min="1" aria-label="Column" x-model.number="ci.column"></label>
       </div>
@@ -36,7 +36,7 @@
     </div>
     <div>
       <div class="ci-section-heading"><h3>Diagnostics <span class="ci-count" x-text="ci.reports.length + (ci.reports.length===1 ? ' file' : ' files')"></span></h3><div class="ci-totals"><span><x-icon name="error" :class="{'ci-error':ci.errorCount}"></x-icon><span x-text="ci.errorCount"></span><span x-text="ci.errorCount===1?'error':'errors'"></span></span><span><x-icon name="warning" :class="{'ci-warning':ci.warningCount}"></x-icon><span x-text="ci.warningCount"></span><span x-text="ci.warningCount===1?'warning':'warnings'"></span></span></div></div>
-      <div class="ci-empty" x-show="!ci.reports.length"><x-icon name="data_check"></x-icon><h3>Ready to check your code</h3><p x-text="ci.status?.scope.semantic_trusted ? 'Choose a project file above. Diagnostics also update after you edit.' : 'Review project access to start checking files.'"></p><button class="button" x-show="!ci.status?.scope.semantic_trusted" @click="ci.tab='setup'"><x-icon name="tune"></x-icon>Review access</button></div>
+      <div class="ci-empty" x-show="!ci.reports.length"><x-icon name="data_check"></x-icon><h3>Ready to check your code</h3><p x-text="ci.status?.scope.semantic_trusted ? 'Choose a workspace file above. Diagnostics also update after you edit.' : 'Review workspace access to start checking files.'"></p><button class="button" x-show="!ci.status?.scope.semantic_trusted" @click="ci.tab='setup'"><x-icon name="tune"></x-icon>Review access</button></div>
       <template x-for="report in ci.reports" :key="report.path"><article class="ci-report">
         <div class="ci-report-head"><button class="ci-file-link" @click="ci.openFile(report.path)" :title="report.path"><x-icon name="description"></x-icon><span x-text="ci.relative(report.path)"></span></button><span class="ci-badge" :data-state="report.status"><x-icon :name="ci.stateIcon(report.status)"></x-icon><span x-text="ci.title(report.status)"></span></span></div>
         <p class="ci-inline-note" x-show="report.reason" x-text="report.reason"></p>
@@ -95,22 +95,22 @@
   </section>
 
   <section class="ci-page" role="tabpanel" aria-label="Setup" x-show="ci.tab === 'setup'" x-cloak>
-    <section class="ci-setup-section"><div class="ci-section-heading"><h3><x-icon name="dns"></x-icon>Project environment</h3><span class="ci-badge">Docker</span></div>
-      <div class="ci-box"><dl class="ci-keyvalues"><dt>Project</dt><dd x-text="ci.status?.scope.project || 'Select a project chat'"></dd><dt>Location</dt><dd><code x-text="ci.status?.scope.root || '—'"></code></dd><dt>Python</dt><dd><code x-text="ci.status?.scope.python || '—'"></code></dd><dt>Node.js</dt><dd><code x-text="ci.status?.scope.node || '—'"></code></dd></dl></div>
-      <p class="ci-caption">Choose interpreters and debug targets in this project’s plugin settings.</p>
+    <section class="ci-setup-section"><div class="ci-section-heading"><h3><x-icon name="dns"></x-icon>Workspace environment</h3><span class="ci-badge">Docker</span></div>
+      <div class="ci-box"><dl class="ci-keyvalues"><dt>Workspace</dt><dd x-text="ci.status?.scope.workspace_label || 'Select a chat'"></dd><dt>Location</dt><dd><code x-text="ci.status?.scope.root || '—'"></code></dd><dt>Python</dt><dd><code x-text="ci.status?.scope.python || '—'"></code></dd><dt>Node.js</dt><dd><code x-text="ci.status?.scope.node || '—'"></code></dd></dl></div>
+      <p class="ci-caption">Use project plugin settings for a project, or global/profile plugin settings for the working directory.</p>
     </section>
     <section class="ci-setup-section"><div class="ci-section-heading"><h3><x-icon name="deployed_code"></x-icon>Language tools</h3><span class="ci-badge"><x-icon :name="ci.status?.tools.installed ? 'check_circle' : 'build'"></x-icon><span x-text="ci.status?.tools.installed ? 'Installed' : 'Repair needed'"></span></span></div>
       <ul class="ci-box ci-tools"><template x-for="(version,name) in ci.status?.tools.npm || {}" :key="name"><li><span x-text="name"></span><code x-text="version"></code></li></template><template x-for="(info,name) in ci.status?.tools.versions || {}" :key="name"><li><span x-text="name==='js-debug' ? 'vscode-js-debug' : name"></span><code x-text="info.version || 'Pinned release'"></code></li></template></ul>
       <p class="ci-caption">Prepared automatically when you install or update this plugin. Tools use plugin-owned storage; project and global dependencies stay unchanged.</p>
       <details><summary><x-icon name="build"></x-icon>Repair tools<x-icon name="chevron_right" class="ci-chevron"></x-icon></summary><p class="ci-caption">Download the pinned tools again if files are missing or damaged. Repair stops active sessions and requires internet access.</p><button class="button" @click="ci.repairTools()" :disabled="ci.busy || !ci.status"><x-icon name="build"></x-icon>Repair tools</button></details>
     </section>
-    <section class="ci-setup-section"><div class="ci-section-heading"><h3><x-icon name="verified_user"></x-icon>Project access</h3></div>
+    <section class="ci-setup-section"><div class="ci-section-heading"><h3><x-icon name="verified_user"></x-icon>Workspace access</h3></div>
       <div class="ci-box"><div class="ci-access"><x-icon name="code"></x-icon><div class="ci-grow"><div class="ci-row ci-between"><h3>Semantic tools</h3><span class="ci-badge" x-text="ci.status?.scope.semantic_trusted ? 'Allowed' : 'Review required'"></span></div><p>Diagnostics, navigation and edit proposals. Language servers may load project configuration and plugins.</p><button class="button" @click="ci.grant('semantic', !ci.status.scope.semantic_trusted)" :disabled="!ci.status || ci.busy"><x-icon :name="ci.status?.scope.semantic_trusted ? 'lock' : 'lock_open'"></x-icon><span x-text="ci.status?.scope.semantic_trusted ? 'Revoke semantic access' : 'Allow semantic tools'"></span></button></div></div>
-      <div class="ci-access"><x-icon name="bug_report"></x-icon><div class="ci-grow"><div class="ci-row ci-between"><h3>Debugging</h3><span class="ci-badge" x-text="ci.status?.scope.debug_trusted ? 'Allowed' : 'Review required'"></span></div><p>Launch configured targets and inspect execution. Debugging runs project code in this runtime.</p><button class="button" @click="ci.grant('debug', !ci.status.scope.debug_trusted)" :disabled="!ci.status || ci.busy"><x-icon :name="ci.status?.scope.debug_trusted ? 'lock' : 'lock_open'"></x-icon><span x-text="ci.status?.scope.debug_trusted ? 'Revoke debugging access' : 'Allow configured targets'"></span></button></div></div></div>
-      <p class="ci-caption">Access applies to this project, profile, environment and tool configuration. Changes require a new review.</p>
+      <div class="ci-access"><x-icon name="bug_report"></x-icon><div class="ci-grow"><div class="ci-row ci-between"><h3>Debugging</h3><span class="ci-badge" x-text="ci.status?.scope.debug_trusted ? 'Allowed' : 'Review required'"></span></div><p>Launch configured targets and inspect execution. Debugging runs workspace code in this runtime.</p><button class="button" @click="ci.grant('debug', !ci.status.scope.debug_trusted)" :disabled="!ci.status || ci.busy"><x-icon :name="ci.status?.scope.debug_trusted ? 'lock' : 'lock_open'"></x-icon><span x-text="ci.status?.scope.debug_trusted ? 'Revoke debugging access' : 'Allow configured targets'"></span></button></div></div></div>
+      <p class="ci-caption">Access applies to this folder, profile, environment and tool configuration. Changes require a new review.</p>
     </section>
     <details><summary><x-icon name="settings"></x-icon>Full configuration<x-icon name="chevron_right" class="ci-chevron"></x-icon></summary><pre class="ci-pre" x-text="JSON.stringify(ci.status?.scope,null,2)"></pre></details>
-    <div class="ci-note"><x-icon name="info"></x-icon><p>Project files and tools must share this Docker runtime. Remote Connector and split-host development are not supported in this release.</p></div>
+    <div class="ci-note"><x-icon name="info"></x-icon><p>Workspace files and tools must share this Docker runtime. Remote Connector and split-host development are not supported in this release.</p></div>
   </section>
   </div>
 </section></body></html>
