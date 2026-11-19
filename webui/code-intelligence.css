@@ -1,3 +1,9 @@
+.right-canvas-surface-panel.ci-canvas-surface {
+  /* Keep a box: core's generic x-data wrapper uses display: contents,
+     which would bypass the canvas surface's opacity and pointer isolation. */
+  display:flex;
+}
+
 .ci-panel {
   --ci-muted:var(--color-text-muted);
   --ci-edge:var(--color-border);
