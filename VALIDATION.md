@@ -1,4 +1,15 @@
-# Validation — Code Intelligence 0.3.0
+# Validation — Code Intelligence 0.3.1
+
+## 0.3.1 canvas visibility correction
+
+Verified November 18, 2026 in a running launcher-managed Agent Zero v2.16 instance
+at core commit `2b0b3a416d80638379dc575798a4174ab4d3e1d9`. Core's generic
+`x-extension > x-component > div[x-data]` rule set this surface to `display:
+contents`; consequently, its content painted over Swarm even while the surface
+had opacity zero. The plugin's scoped surface class now restores `display: flex`,
+retaining the framework's opacity and pointer isolation. A live reload and canvas
+tab switch verified the correction with Swarm installed. No language-server or
+debugger behavior changed; the backend suite was not repeated for this CSS fix.
 
 Version 0.3.0 supports ordinary chats without an Agent Zero project. It uses the configured working directory, retaining project roots when selected. Automatic lifecycle installation and the thumbnails are unchanged.
 
